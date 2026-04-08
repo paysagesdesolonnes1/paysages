@@ -1022,61 +1022,6 @@ function renderJour() {
   container.appendChild(grid);
 }
 
-  // --- 2. LA GRILLE DE TRAVAIL (Heures + Créneaux) ---
-  var grid = document.createElement('div');
-  grid.className = 'mobile-grid-container';
-  grid.style.borderRadius = '0 0 var(--radius) var(--radius)';
-  grid.style.borderTop = 'none';
-
-  // Colonne des heures (plus d'espaceur magique, le 7h est tout en haut)
-  var hourCol = '<div class="m-grid-hour-col">';
-  for(var h=7; h<=19; h++) {
-      hourCol += '<div class="m-grid-hour-label">' + h + 'h</div>';
-  }
-  hourCol += '</div>';
-  grid.innerHTML += hourCol;
-
-  // Colonnes des jours
-  for (var i = 0; i < 3; i++) {
-    var d = new Date(jourSelectionne);
-    d.setDate(d.getDate() + i);
-    var dStr = fmt(d);
-
-    var dayCol = document.createElement('div');
-    dayCol.className = 'm-grid-day-col';
-
-    var colContent = '';
-    
-    // Uniquement les cases (plus de header ici !)
-    for(var h=7; h<=19; h++) {
-      colContent += '<div style="height:50px; border-bottom:1px solid #f9f9f9; box-sizing:border-box;" onclick="ouvrirNouveauCreneau(\''+dStr+'\', \''+h+':00\')"></div>';
-    }
-
-    var ivs = DB.interventions.filter(function(iv) { return fmt(iv.date) === dStr && matchRecherche(iv); });
-    
-    ivs.forEach(function(iv) {
-      var c = DB.clients.find(function(x) { return x.id === iv.clientId; });
-      var nom = c ? c.nom : iv.nomLibre || '?';
-      var statutClass = iv.statut || 'planifie'; 
-      
-      var mDeb = heure2min(iv.heureDebut);
-      var mFin = heure2min(iv.heureFin) || (mDeb + 60);
-      
-      // Le calcul redevient pur, plus besoin d'ajouter de compensation
-      var top = ((mDeb - 420) / 60) * 50; 
-      var hauteur = ((mFin - mDeb) / 60) * 50 - 2;
-
-      colContent += '<div class="m-creneau ' + statutClass + '" ' +
-                    'style="top:'+top+'px; height:'+hauteur+'px;" onclick="event.stopPropagation();ouvrirCreneau(\''+iv.id+'\')">' +
-                    '<b>' + nom + '</b></div>';
-    });
-
-    dayCol.innerHTML = colContent;
-    grid.appendChild(dayCol);
-  }
-  container.appendChild(grid);
-}
-
 function renderAgendaMobile() {
   var d0 = new Date(semaine);
   var dFin = new Date(semaine); 
