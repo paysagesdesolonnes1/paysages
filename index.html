@@ -597,8 +597,9 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
       <button class="btn" onclick="fermerModalC()">Annuler</button>
       <button class="btn btn-rouge" id="btnSuppC" style="display:none" onclick="supprimerCreneau()">Supprimer</button>
       
-      <button class="btn" style="border-color: var(--vert); color: var(--vert);" onclick="sauvegarderCreneau(null, true)">+ Suivant</button>
+      <button class="btn" id="btnDupliquerC" style="background: var(--gris-c);" onclick="dupliquerCreneau()">Dupliquer</button>
       
+      <button class="btn" style="border-color: var(--vert); color: var(--vert);" onclick="sauvegarderCreneau(null, true)">+ Suivant</button>
       <button class="btn btn-vert" onclick="sauvegarderCreneau()">Enregistrer</button>
     </div>
   </div>
@@ -1275,6 +1276,27 @@ function supprimerCreneau(){
   fermerModalC(); renderAgenda();
   syncDelete('intervention',creneauCourant.id);
   showToast('Créneau supprimé.');
+}
+
+  function dupliquerCreneau() {
+  // 1. On détache l'ID (si c'était un créneau existant, il devient un nouveau, si c'était déjà un nouveau, ça ne change rien)
+  creneauCourant = null;
+  
+  // 2. On met à jour l'interface du Modal
+  document.getElementById('modalCTitre').textContent = 'Nouveau créneau (Copie)';
+  document.getElementById('btnSuppC').style.display = 'none'; // Pas de suppression possible sur un créneau non enregistré
+  document.getElementById('fgStatut').style.display = 'none';
+  document.getElementById('inputStatut').value = 'planifie';
+  
+  // 3. On décale la date à demain automatiquement
+  var dateInput = document.getElementById('inputDate');
+  if (dateInput.value) {
+    var d = new Date(dateInput.value);
+    d.setDate(d.getDate() + 1);
+    dateInput.value = fmt(d);
+  }
+  
+  showToast('Décalé à demain ! Ajustez si besoin puis Enregistrez.');
 }
 
 // ══════════════════════════════════════
