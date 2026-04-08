@@ -1697,10 +1697,8 @@ function calculerRappels(){
 function toggleRappels(){document.getElementById('rappelsPanel').classList.toggle('open');calculerRappels();}
 
 // ══════════════════════════════════════
-//  SYNC GOOGLE SHEETS (FUSION INTELLIGENTE)
+//  SYNC GOOGLE SHEETS
 // ══════════════════════════════════════
-window.idsSupprimes = window.idsSupprimes || {};
-
 function showSync(msg,err){
   var b=document.getElementById('syncBar');
   b.textContent=msg; b.className='sync-bar'+(err?' err':'');
@@ -1708,88 +1706,91 @@ function showSync(msg,err){
 }
 function hideSync(){document.getElementById('syncBar').style.display='none';}
 
+// --- NOUVEAU : Le bouclier temporel ---
+var blockSyncUntil = 0; 
+
 function syncSave(type, data) {
   var url = DB.urlScript || document.getElementById('paramUrl').value.trim();
-  if (!url) return;
-  
-  if (type === 'intervention') data._modifieLe = Date.now(); 
-  
-  fetch(url, { method: 'POST', mode: 'no-cors', cache: 'no-cache', body: JSON.stringify({ action: 'save', type: type, data: data }) })
-  .then(function() { showSync('Synchronisé ✓'); setTimeout(hideSync, 2000); })
-  .catch(function() { showSync('Erreur réseau', true); });
+  if (!url) {
+    showToast("Erreur : URL non configurée dans les paramètres.");
+    return;
+  }
+
+  // On active le bouclier : on bloque la synchro automatique pendant 8 secondes
+  blockSyncUntil = Date.now() + 8000;
+
+  fetch(url, {
+    method: 'POST',
+    mode: 'no-cors', 
+    cache: 'no-cache',
+    body: JSON.stringify({ action: 'save', type: type, data: data })
+  })
+  .then(function() {
+    showSync('Synchronisé ✓');
+    setTimeout(hideSync, 2000);
+  })
+  .catch(function(err) {
+    console.error("Erreur d'envoi :", err);
+    showSync('Erreur de réseau', true);
+  });
 }
 
-function syncDelete(type,id){
+function syncDelete(type, id){
   var url = DB.urlScript;
   if(!url) return;
   
-  if (type === 'intervention') window.idsSupprimes[id] = Date.now(); 
+  // On active le bouclier aussi pour les suppressions (8 secondes)
+  blockSyncUntil = Date.now() + 8000; 
   
-  fetch(url, { method: 'POST', mode: 'no-cors', cache: 'no-cache', body: JSON.stringify({action:'delete', type:type, id:id}) }).catch(function(){});
-}
-
-function appliquerDonneesServeur(d) {
-  var now = Date.now();
-  if(d.clients) {
-    d.clients.forEach(function(clientServeur) {
-      var clientLocal = DB.clients.find(function(lc) { return lc.id === clientServeur.id; });
-      if (clientLocal && clientLocal.devis) clientServeur.devis = clientLocal.devis;
-    });
-    DB.clients = d.clients;
-  }
-  if(d.interventions) {
-    var serverIvs = d.interventions.map(function(iv) {
-      if (iv.taches && typeof iv.taches === 'string') iv.taches = iv.taches.split(',').map(function(t) { return t.trim(); });
-      return iv;
-    });
-
-    serverIvs = serverIvs.filter(function(srv) {
-      return !(window.idsSupprimes[srv.id] && (now - window.idsSupprimes[srv.id] < 45000));
-    });
-
-    var locauxRecents = DB.interventions.filter(function(loc) {
-      return loc._modifieLe && (now - loc._modifieLe < 45000);
-    });
-
-    var fusion = serverIvs.filter(function(srv) {
-      return !locauxRecents.some(function(loc) { return loc.id === srv.id; });
-    });
-    DB.interventions = fusion.concat(locauxRecents);
-  }
-  
-  if(d.tachesPredef) DB.tachesPredef=d.tachesPredef;
-  if(d.collaborateurs) DB.collaborateurs=d.collaborateurs;
-  
-  saveLocal(); 
-  renderAgenda(); 
-  var pc = document.getElementById('page-clients');
-  if(pc && pc.classList.contains('active') && document.getElementById('vueClients').style.display !== 'none') afficherClients();
+  fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    cache: 'no-cache',
+    body: JSON.stringify({action:'delete', type:type, id:id})
+  }).catch(function(){});
 }
 
 function syncMaintenant(){
-  if(!DB.urlScript){showToast('Configurez d\'abord l\'URL.');return;}
-  showSync('Chargement...');
+  if(!DB.urlScript){showToast('Configurez d\'abord l\'URL du script.');return;}
+  showSync('Chargement depuis Google Sheets...');
   fetch(DB.urlScript+'?action=load')
     .then(function(r){return r.json();})
     .then(function(d){
-      appliquerDonneesServeur(d);
+      if(d.clients) {
+        DB.clients = d.clients.map(function(c) {
+          if (c.devis && typeof c.devis === 'string') {
+            try { c.devis = JSON.parse(c.devis); } catch(e) { c.devis = []; }
+          } else if (!Array.isArray(c.devis)) {
+            c.devis = [];
+          }
+          return c;
+        });
+      }
+      if(d.interventions) {
+        DB.interventions = d.interventions.map(function(iv) {
+          if (iv.taches && typeof iv.taches === 'string') {
+            iv.taches = iv.taches.split(',').map(function(t) { return t.trim(); });
+          }
+          return iv;
+        });
+      }
+      if(d.tachesPredef) DB.tachesPredef=d.tachesPredef;
+      if(d.collaborateurs) DB.collaborateurs=d.collaborateurs;
+      
+      saveLocal(); renderAgenda(); afficherClients();
       showSync('Synchronisé ✓'); setTimeout(hideSync,2500);
-      var ls = document.getElementById('loadingScreen');
-      if(ls) ls.style.display = 'none';
+      showToast('Synchronisation réussie !');
+
+      // === LA LIGNE À AJOUTER EST ICI ===
+      document.getElementById('loadingScreen').style.display = 'none';
+      // =================================
     })
     .catch(function(){
-      showSync('Connexion impossible',true); setTimeout(hideSync,3000);
-      var ls = document.getElementById('loadingScreen');
-      if(ls) ls.style.display = 'none';
+      showSync('Connexion impossible',true);
+      setTimeout(hideSync,3000);
+      // On cache quand même l'écran si ça échoue pour ne pas rester bloqué
+      document.getElementById('loadingScreen').style.display = 'none'; 
     });
-}
-
-function syncAutomatique() {
-  if(!DB.urlScript) return;
-  fetch(DB.urlScript+'?action=load')
-    .then(function(r){return r.json();})
-    .then(function(d){ appliquerDonneesServeur(d); })
-    .catch(function(){});
 }
 
 function testerConnexion(){
@@ -1800,19 +1801,23 @@ function testerConnexion(){
     .then(function(d){showToast(d.ok?'✓ Connexion réussie !':'✗ Erreur : '+(d.error||'inconnue'));})
     .catch(function(){showToast('✗ Impossible de se connecter.');});
 }
-
 // Naviguer vers une date choisie via le calendrier natif
 function allerADate(dateStr) {
   if (!dateStr) return;
   var d = new Date(dateStr);
+  
+  // On place la semaine sur le lundi de la date choisie
   semaine = lundi(d);
+  // On sélectionne le jour exact
   jourSelectionne = fmt(d);
+  
+  // On rafraîchit l'affichage (PC et Mobile)
   renderAgenda();
 }
-
 // --- GESTION INTELLIGENTE DE LA DURÉE (STYLE GOOGLE AGENDA) ---
 var dureeMemoire = 60; // 1 heure par défaut
 
+// 1. Mémorise l'écart ACTUEL juste avant qu'on modifie l'heure de début
 function majDureeCreneau() {
   var hDeb = document.getElementById('inputHDeb').value;
   var hFin = document.getElementById('inputHFin').value;
@@ -1824,20 +1829,248 @@ function majDureeCreneau() {
   }
 }
 
+// 2. Décale l'heure de fin en gardant cet écart en mémoire
 function decalerHeureFin() {
   var hDeb = document.getElementById('inputHDeb').value;
   if (!hDeb) return;
+  
   var mDeb = heure2min(hDeb);
   var mFin = mDeb + dureeMemoire; // On applique la durée mémorisée
+  
   var hF = Math.floor(mFin / 60) % 24;
   var mF = mFin % 60;
+  
+  // On met le tout au format 00:00
   document.getElementById('inputHFin').value = (hF < 10 ? '0' + hF : hF) + ':' + (mF < 10 ? '0' + mF : mF);
 }
+// ══════════════════════════════════════
+//  LOCAL STORAGE
+// ══════════════════════════════════════
+function saveLocal(){
+  try{localStorage.setItem('paysages_db',JSON.stringify(DB));}catch(e){}
+}
 
+function loadLocal(){
+  try{
+    var s=localStorage.getItem('paysages_db');
+    if(!s) return false;
+    var d=JSON.parse(s);
+    if(d.clients) DB.clients=d.clients;
+    if(d.interventions) DB.interventions=d.interventions;
+    if(d.tachesPredef) DB.tachesPredef=d.tachesPredef;
+    if(d.collaborateurs) DB.collaborateurs=d.collaborateurs;
+    return true;
+}catch(e){return false;}
+}
+
+// ══════════════════════════════════════
+//  FERMETURE MODALS AU CLIC OVERLAY
+// ══════════════════════════════════════
+document.getElementById('overlayC').addEventListener('click',function(e){if(e.target===this)fermerModalC();});
+document.getElementById('overlayClient').addEventListener('click',function(e){if(e.target===this)fermerModalClient();});
+document.addEventListener('click',function(e){if(!e.target.closest('[style*="position:relative"]'))document.getElementById('acList').style.display='none';});
+document.getElementById('overlayDevis').addEventListener('click',function(e){if(e.target===this)fermerModalDevis();});
+document.getElementById('overlayListeDevis').addEventListener('click',function(e){if(e.target===this)fermerListeDevis();});
+
+// ══════════════════════════════════════
+//  GESTION DU SWIPE (TACTILE MOBILE)
+// ══════════════════════════════════════
+var touchStartX = 0;
+var touchStartY = 0;
+// On cible uniquement la grille des heures, pas le bandeau vert !
+var zoneAgenda = document.getElementById('agendaJour'); 
+
+if (zoneAgenda) {
+  zoneAgenda.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, {passive: true});
+
+  zoneAgenda.addEventListener('touchend', function(e) {
+    if (window.innerWidth > 640) return; // Désactivé sur ordinateur
+
+    var touchEndX = e.changedTouches[0].screenX;
+    var touchEndY = e.changedTouches[0].screenY;
+    
+    var deltaX = touchEndX - touchStartX;
+    var deltaY = touchEndY - touchStartY;
+    
+    // FILTRE ANTI-BUG : 
+    // 1. Le glissement doit être long (au moins 70 pixels)
+    // 2. Il doit être 2x plus horizontal que vertical (ignore les scrolls en diagonale)
+    if (Math.abs(deltaX) > 70 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+      if (deltaX < 0) glisserJour(1);  // Swipe vers la gauche = Avancer
+      else glisserJour(-1);            // Swipe vers la droite = Reculer
+    }
+  }, {passive: true});
+}
+
+// La fonction qui décale l'agenda
+function glisserJour(delta) {
+  var d = new Date(jourSelectionne);
+  d.setDate(d.getDate() + delta);
+  
+  if (d.getDay() === 0) { // Si on tombe un dimanche, on saute !
+    d.setDate(d.getDate() + delta);
+  }
+  
+  jourSelectionne = fmt(d);
+  
+  var d0 = new Date(semaine);
+  var d5 = new Date(semaine); 
+  d5.setDate(d5.getDate() + 6);
+  
+  if (d < d0) {
+    semaine.setDate(semaine.getDate() - 7);
+    renderAgenda(); 
+  } else if (d > d5) {
+    semaine.setDate(semaine.getDate() + 7);
+    renderAgenda(); 
+  } else {
+    renderStrip(); 
+    renderJour();  
+  }
+}
+
+// --- RECHERCHE DANS L'AGENDA ---
+var rechercheAgenda = '';
+
+// --- RECHERCHE GLOBALE DANS L'AGENDA ---
+var rechercheAgenda = '';
+
+function filtrerAgenda(val) {
+  rechercheAgenda = val.toLowerCase().trim();
+  
+  // On cible nos éléments
+  var gridPC = document.querySelector('.agenda-grid');
+  var gridMobHead = document.getElementById('vueJourHeader');
+  var gridMobBody = document.getElementById('agendaJour');
+  var containerRes = document.getElementById('agendaSearchResults');
+  
+  if (rechercheAgenda) {
+    // 1. On cache les grilles de l'agenda
+    gridPC.style.display = 'none';
+    if(gridMobHead) gridMobHead.style.display = 'none';
+    if(gridMobBody) gridMobBody.style.display = 'none';
+    
+    // 2. On affiche la boîte de résultats et on la remplit
+    containerRes.style.display = 'block';
+    renderSearchResults();
+  } else {
+    // 3. Si la barre est vide, on remet tout comme avant !
+    gridPC.style.display = '';
+    if(gridMobHead) gridMobHead.style.display = '';
+    if(gridMobBody) gridMobBody.style.display = '';
+    
+    containerRes.style.display = 'none';
+    renderAgenda();
+  }
+}
+
+function matchRecherche(iv) {
+  if (!rechercheAgenda) return true;
+  var c = DB.clients.find(function(x) { return x.id === iv.clientId; });
+  var nomComplet = (c ? c.nom + ' ' + (c.prenom || '') : iv.nomLibre || '').toLowerCase();
+  return nomComplet.includes(rechercheAgenda);
+}
+
+function renderSearchResults() {
+  var container = document.getElementById('agendaSearchResults');
+  var matches = DB.interventions.filter(matchRecherche);
+  
+  if (!matches.length) {
+    container.innerHTML = '<p style="color:var(--texte-s); padding:20px; text-align:center;">Aucun créneau trouvé pour cette recherche.</p>';
+    return;
+  }
+  
+  // On trie du plus récent au plus ancien
+  matches.sort(function(a, b) {
+    var dateA = a.date + 'T' + (a.heureDebut || '00:00');
+    var dateB = b.date + 'T' + (b.heureDebut || '00:00');
+    return dateB.localeCompare(dateA); 
+  });
+
+  var html = '<div style="font-weight:600; margin-bottom:12px; color:var(--vert)">' + matches.length + ' résultat(s) trouvé(s)</div>';
+  html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+  
+  // On réutilise le beau design des cartes d'interventions de la fiche client !
+  matches.forEach(function(iv) {
+    var c = DB.clients.find(function(x) { return x.id === iv.clientId; });
+    var nom = c ? c.nom + (c.prenom ? ' ' + c.prenom : '') : iv.nomLibre || '?';
+    var d = new Date(iv.date + 'T00:00:00');
+    var bc = iv.statut === 'termine' ? 't' : iv.statut === 'annule' ? 'a' : iv.statut === 'en_cours' ? 'e' : 'p';
+    var bl = iv.statut === 'termine' ? 'Terminé' : iv.statut === 'annule' ? 'Annulé' : iv.statut === 'en_cours' ? 'En cours' : 'Planifié';
+    var taches = (iv.taches && iv.taches.length) ? iv.taches.join(', ') : '—';
+    
+    html += '<div class="iv-item" style="max-width: 600px;" onclick="ouvrirCreneau(\'' + iv.id + '\')">'
+      + '<div class="iv-date"><div class="iv-jour">' + d.getDate() + '</div><div class="iv-mois">' + MOIS[d.getMonth()] + '</div></div>'
+      + '<div style="flex:1">'
+      + '<div style="font-weight:600">' + nom + ' <span class="badge ' + bc + '" style="float:right">' + bl + '</span></div>'
+      + '<div style="font-size:13px; margin-top:2px">' + taches + '</div>'
+      + '<div style="font-size:12px; color:var(--texte-s); margin-top:4px">📅 ' + d.getFullYear() + ' • 🕒 ' + (iv.heureDebut||'') + (iv.heureFin ? ' - ' + iv.heureFin : '') + '</div>'
+      + '</div></div>';
+  });
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+// ══════════════════════════════════════
+//  SYNCHRONISATION SILENCIEUSE (MULTI-UTILISATEURS)
+// ══════════════════════════════════════
+function syncAutomatique() {
+  if(!DB.urlScript) return; 
+  
+  // LE BOUCLIER EST LÀ : Si on a sauvegardé il y a moins de 8 secondes, on annule la synchro pour ne pas effacer notre travail local
+  if (Date.now() < blockSyncUntil) {
+    console.log("Synchro auto ignorée (bouclier actif)");
+    return; 
+  }
+  
+  fetch(DB.urlScript+'?action=load')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.clients) {
+        d.clients.forEach(function(clientServeur) {
+          var clientLocal = DB.clients.find(function(lc) { return lc.id === clientServeur.id; });
+          if (clientLocal && clientLocal.devis) {
+            clientServeur.devis = clientLocal.devis;
+          }
+        });
+        DB.clients = d.clients;
+      }
+      if(d.interventions) {
+        DB.interventions = d.interventions.map(function(iv) {
+          if (iv.taches && typeof iv.taches === 'string') {
+            iv.taches = iv.taches.split(',').map(function(t) { return t.trim(); });
+          }
+          return iv;
+        });
+      }
+      if(d.tachesPredef) DB.tachesPredef=d.tachesPredef;
+      if(d.collaborateurs) DB.collaborateurs=d.collaborateurs;
+      
+      saveLocal();
+      renderAgenda();
+      
+      var pageClients = document.getElementById('page-clients');
+      var vueClients = document.getElementById('vueClients');
+      if(pageClients && pageClients.classList.contains('active') && vueClients.style.display !== 'none') {
+         afficherClients();
+      }
+    })
+    .catch(function(){});
+}
+
+// DÉCLENCHEUR 1 : Quand on rallume l'écran ou qu'on revient sur l'onglet
 document.addEventListener('visibilitychange', function() {
-  if (!document.hidden) syncAutomatique();
+  if (!document.hidden) {
+    syncAutomatique();
+  }
 });
+
+// DÉCLENCHEUR 2 : Toutes les 2 minutes (120 000 ms) en tâche de fond
 setInterval(syncAutomatique, 60000);
+
 
 // ══════════════════════════════════════
 //  INIT
