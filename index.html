@@ -1717,7 +1717,7 @@ function syncSave(type, data) {
   }
 
   // On active le bouclier : on bloque la synchro automatique pendant 8 secondes
-  blockSyncUntil = Date.now() + 8000;
+  blockSyncUntil = Date.now() + 20000;
 
   fetch(url, {
     method: 'POST',
@@ -1740,7 +1740,7 @@ function syncDelete(type, id){
   if(!url) return;
   
   // On active le bouclier aussi pour les suppressions (8 secondes)
-  blockSyncUntil = Date.now() + 8000; 
+  blockSyncUntil = Date.now() + 20000; 
   
   fetch(url, {
     method: 'POST',
@@ -2063,7 +2063,7 @@ function syncAutomatique() {
 
 // DÉCLENCHEUR 1 : Quand on rallume l'écran ou qu'on revient sur l'onglet
 document.addEventListener('visibilitychange', function() {
-  if (!document.hidden) {
+  if (!document.hidden && Date.now() > blockSyncUntil) {
     syncAutomatique();
   }
 });
