@@ -471,6 +471,7 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
     
     <h2 id="titreAgenda"></h2>
     
+    <button class="btn" onclick="ouvrirNotes()" style="white-space:nowrap">📝 Notes</button>
     <input type="text" class="search-input search-agenda" placeholder="🔍 Rechercher un client..." oninput="filtrerAgenda(this.value)">
     
     <div style="display:flex;gap:5px;">
@@ -2143,6 +2144,30 @@ function ouvrirListeDevisAcceptes() {
 function fermerListeDevis() {
   document.getElementById('overlayListeDevis').classList.remove('open');
 }
+
+  function ouvrirNotes() {
+  document.getElementById('notesContenu').value = localStorage.getItem('pdo_notes') || '';
+  document.getElementById('overlayNotes').classList.add('open');
+}
+function fermerNotes() {
+  document.getElementById('overlayNotes').classList.remove('open');
+}
+function sauvegarderNotes() {
+  localStorage.setItem('pdo_notes', document.getElementById('notesContenu').value);
+  fermerNotes();
+  showToast('Notes enregistrées !');
+}
+  
 </script>
+  <div class="overlay" id="overlayNotes">
+  <div class="modal">
+    <h3>📝 Notes</h3>
+    <textarea id="notesContenu" rows="12" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;resize:vertical;" placeholder="Notez ici ce que vous voulez..."></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="fermerNotes()">Fermer</button>
+      <button class="btn btn-vert" onclick="sauvegarderNotes()">Enregistrer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
