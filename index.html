@@ -78,10 +78,10 @@
 .m-day-name { font-size: 10px; text-transform: uppercase; }
 
 /* Les créneaux dans la grille mobile */
+/* Les créneaux dans la grille mobile */
 .m-creneau {
   position: absolute;
-  left: 2px;
-  right: 2px;
+  /* On enlève right: 2px pour permettre la largeur dynamique */
   border-radius: 4px;
   padding: 2px 4px;
   font-size: 9px;
@@ -90,6 +90,7 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   border-left-width: 3px;
   border-left-style: solid;
+  box-sizing: border-box; /* Important pour le calcul des largeurs */
 }
 
 :root {
