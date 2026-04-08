@@ -331,6 +331,10 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
 
 /* --- GESTION MOBILE COMPLÈTE (< 640px) --- */
 @media (max-width: 640px) {
+
+  #page-agenda .toolbar { flex-wrap: nowrap; }
+  .barre-mobile-extra { margin-bottom: 10px; }
+  
   /* --- 1. INTERFACE ÉPURÉE & ESPACEMENT --- */
   .vue-jour-header { display: none !important; }
   .agenda-grid { display: none; }
@@ -340,7 +344,7 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
   /* La Toolbar (Boutons + Recherche) centrée et espacée */
   .toolbar { 
     display: flex !important;
-    flex-wrap: wrap !important;      /* Permet de mettre la date sur une ligne et les boutons sur une autre */
+    flex-wrap: nowrap !important;      /* Permet de mettre la date sur une ligne et les boutons sur une autre */
     justify-content: center !important; 
     align-items: center !important;
     gap: 8px !important;
