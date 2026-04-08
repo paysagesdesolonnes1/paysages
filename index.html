@@ -463,23 +463,27 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
 <div class="page active" id="page-agenda">
   
   <div class="toolbar">
-    <div style="display:flex;gap:5px">
-      <button class="btn" onclick="changerSemaine(-1)">‹</button>
-      <button class="btn" onclick="allerAujourdhui()">Auj.</button>
-      <button class="btn" onclick="changerSemaine(1)">›</button>
+  <div style="display:flex;gap:5px">
+    <button class="btn" onclick="changerSemaine(-1)">‹</button>
+    <button class="btn" onclick="allerAujourdhui()">Auj.</button>
+    <button class="btn" onclick="changerSemaine(1)">›</button>
+  </div>
+  
+  <h2 id="titreAgenda"></h2>
+
+  <div style="display:flex;gap:5px;">
+    <button class="btn btn-vert" onclick="ouvrirNouveauCreneau()">+ Créneau</button>
+    <div style="position: relative; width: 40px; height: 35px; background: white; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; cursor: pointer;">
+      <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; pointer-events: none;">📅</div>
+      <input type="date" class="btn-date-magique" onchange="allerADate(this.value)">
     </div>
-    
-    <h2 id="titreAgenda"></h2>
-    
-    <button class="btn" onclick="ouvrirNotes()" style="white-space:nowrap">📝 Notes</button>
-    <input type="text" class="search-input search-agenda" placeholder="🔍 Rechercher un client..." oninput="filtrerAgenda(this.value)">
-    
-    <div style="display:flex;gap:5px;">
-      <button class="btn btn-vert" onclick="ouvrirNouveauCreneau()">+ Créneau</button>
-      <div style="position: relative; width: 40px; height: 35px; background: white; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; cursor: pointer;">
-        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; pointer-events: none;">📅</div>
-        <input type="date" class="btn-date-magique" onchange="allerADate(this.value)">
-    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:0 2px;">
+  <button class="btn" onclick="ouvrirNotes()" style="white-space:nowrap">📝 Notes</button>
+  <input type="text" class="search-input search-agenda" placeholder="🔍 Rechercher un client..." oninput="filtrerAgenda(this.value)">
+</div>
   </div>
 </div> <div id="agendaSearchResults" style="display:none; padding: 14px 0;"></div>
 
