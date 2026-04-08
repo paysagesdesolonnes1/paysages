@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>PdO — Agenda & Clients</title>
 <style>
+  #loadingScreen {
+  position: fixed; inset: 0; background: #f4f5f7;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; z-index: 9000; /* Très haut pour tout couvrir */
+}
+#loadingScreen h2 { font-size: 1.1rem; color: #5c7c32; } /* Vert comme ton agenda */
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid #d0d4e0;
+  border-top-color: #5c7c32;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+  
 /* --- NOUVEAU CSS GRILLE MOBILE 3 JOURS --- */
 .mobile-grid-container {
   display: grid;
@@ -417,7 +432,11 @@ nav { background: var(--vert-c); padding: 0 14px; display: flex; align-items: ce
 </style>
 </head>
 <body>
-
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <h2>Paysages des Olonnes</h2>
+  <p style="font-size: 0.8rem; color: #7a80a0;">Chargement de l'agenda...</p>
+</div>
 <div id="syncBar" class="sync-bar"></div>
 
 <nav>
@@ -1709,20 +1728,14 @@ function syncMaintenant(){
     .then(function(d){
       if(d.clients) {
         DB.clients = d.clients.map(function(c) {
-          // Si la colonne 'devis' contient du texte, on le transforme en liste utilisable
           if (c.devis && typeof c.devis === 'string') {
-            try { 
-              c.devis = JSON.parse(c.devis); 
-            } catch(e) { 
-              c.devis = []; 
-            }
+            try { c.devis = JSON.parse(c.devis); } catch(e) { c.devis = []; }
           } else if (!Array.isArray(c.devis)) {
             c.devis = [];
           }
           return c;
         });
       }
-      
       if(d.interventions) {
         DB.interventions = d.interventions.map(function(iv) {
           if (iv.taches && typeof iv.taches === 'string') {
@@ -1731,15 +1744,23 @@ function syncMaintenant(){
           return iv;
         });
       }
-
       if(d.tachesPredef) DB.tachesPredef=d.tachesPredef;
       if(d.collaborateurs) DB.collaborateurs=d.collaborateurs;
       
       saveLocal(); renderAgenda(); afficherClients();
       showSync('Synchronisé ✓'); setTimeout(hideSync,2500);
       showToast('Synchronisation réussie !');
+
+      // === LA LIGNE À AJOUTER EST ICI ===
+      document.getElementById('loadingScreen').style.display = 'none';
+      // =================================
     })
-    .catch(function(){showSync('Connexion impossible',true);setTimeout(hideSync,3000);});
+    .catch(function(){
+      showSync('Connexion impossible',true);
+      setTimeout(hideSync,3000);
+      // On cache quand même l'écran si ça échoue pour ne pas rester bloqué
+      document.getElementById('loadingScreen').style.display = 'none'; 
+    });
 }
 
 function testerConnexion(){
@@ -2025,10 +2046,16 @@ setInterval(syncAutomatique, 60000);
 //  INIT
 // ══════════════════════════════════════
 loadLocal();
-renderAgenda(); // <-- On force l'affichage immédiat avec les données en mémoire
-if(DB.urlScript){syncMaintenant();}
+renderAgenda(); 
+if(DB.urlScript){
+    syncMaintenant();
+} else {
+    // Si pas d'URL, on cache l'écran car syncMaintenant ne sera pas appelée
+    document.getElementById('loadingScreen').style.display = 'none';
+}
 calculerRappels();
 setInterval(calculerRappels,60000);
+  
 // ══════════════════════════════════════
 //  GESTION DU CLAVIER (Touche Entrée)
 // ══════════════════════════════════════
