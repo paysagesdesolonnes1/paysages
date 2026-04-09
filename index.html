@@ -2156,15 +2156,17 @@ function fermerListeDevis() {
   document.getElementById('overlayListeDevis').classList.remove('open');
 }
 
-  function ouvrirNotes() {
-  document.getElementById('notesContenu').value = localStorage.getItem('pdo_notes') || '';
+function ouvrirNotes() {
+  document.getElementById('notesContenu').value = DB.notes_globales || '';
   document.getElementById('overlayNotes').classList.add('open');
 }
 function fermerNotes() {
   document.getElementById('overlayNotes').classList.remove('open');
 }
 function sauvegarderNotes() {
-  localStorage.setItem('pdo_notes', document.getElementById('notesContenu').value);
+  DB.notes_globales = document.getElementById('notesContenu').value;
+  saveLocal();
+  syncSave('config', { tachesPredef: DB.tachesPredef, collaborateurs: DB.collaborateurs, notes_globales: DB.notes_globales });
   fermerNotes();
   showToast('Notes enregistrées !');
 }
