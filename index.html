@@ -1514,12 +1514,12 @@ function sauvegarderClient(){
   c.adresse=document.getElementById('clientAdresse').value.trim();
   c.ville=document.getElementById('clientVille').value.trim();
   c.notes=document.getElementById('clientNotes').value.trim();
+  c.entretien = document.getElementById('clientEntretien').checked;
   if(clientCourant){var idx=DB.clients.findIndex(function(x){return x.id===c.id;});DB.clients[idx]=c;}
   else DB.clients.push(c);
   fermerModalClient(); afficherClients();
   syncSave('client',c);
   showToast(clientCourant?'Client mis à jour.':'Client créé !');
-  c.entretien = document.getElementById('clientEntretien').checked;
 }
 
 function supprimerClient(){
