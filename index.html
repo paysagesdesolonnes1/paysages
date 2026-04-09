@@ -2185,7 +2185,7 @@ function ouvrirContrats() {
       var infoDerniere = derniere
         ? '📅 ' + fmtFr(derniere.date) + ' — ' + (derniere.taches && derniere.taches.length ? derniere.taches.join(', ') : '—')
         : 'Aucune intervention';
-      return '<div class="iv-item" style="max-width:100%" onclick="document.getElementById(\'overlayContrats\').classList.remove(\'open\');afficherFiche(\''+c.id+'\')">'
+      return '<div class="iv-item" style="max-width:100%;margin:0" onclick="document.getElementById(\'overlayContrats\').classList.remove(\'open\');afficherFiche(\''+c.id+'\')">'
         + '<div style="flex:1">'
         + '<div style="font-weight:600">' + c.nom + (c.prenom ? ' ' + c.prenom : '') + '</div>'
         + '<div style="font-size:12px;color:var(--texte-s);margin-top:3px">' + infoDerniere + '</div>'
