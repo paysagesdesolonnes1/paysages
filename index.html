@@ -775,6 +775,7 @@ function showToast(msg) {
 //  NAVIGATION
 // ══════════════════════════════════════
 function showPage(id) {
+  pushState({ page: id });
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
   document.getElementById('page-'+id).classList.add('active');
@@ -790,6 +791,25 @@ function showPage(id) {
   if(id==='params'){renderParams();}
 }
 
+// ══════════════════════════════════════
+//  GESTION BOUTON RETOUR NAVIGATEUR
+// ══════════════════════════════════════
+function pushState(state) {
+  history.pushState(state, '');
+}
+
+window.addEventListener('popstate', function(e) {
+  var state = e.state;
+  if (!state) { showPage('agenda'); return; }
+  if (state.page === 'fiche') {
+    afficherFiche(state.clientId, true);
+  } else if (state.page === 'clients') {
+    showPage('clients');
+  } else if (state.page === 'agenda') {
+    showPage('agenda');
+  }
+});
+  
 // ══════════════════════════════════════
 //  AGENDA
 // ══════════════════════════════════════
@@ -1362,7 +1382,8 @@ function filtrerClients(){filtreAlpha='';afficherClients();}
 // ══════════════════════════════════════
 //  FICHE CLIENT
 // ══════════════════════════════════════
-function afficherFiche(id){
+function afficherFiche(id, noHistory) {
+  if (!noHistory) pushState({ page: 'fiche', clientId: id });
   showPage('clients'); // Force le passage sur l'onglet clients
   var c=DB.clients.find(function(x){return x.id===id;});
   if(!c) return;
@@ -1474,6 +1495,7 @@ function afficherFiche(id){
 }
 
 function retourClients(){
+  pushState({ page: 'clients' });
   document.getElementById('vueFiche').style.display='none';
   document.getElementById('vueClients').style.display='block';
   afficherClients();
